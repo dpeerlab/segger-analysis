@@ -1,0 +1,21 @@
+{
+    "Fibroblast and Stromal": "#8BC34C",
+    "Smooth Muscle and Pericyte": "#E81F64",
+    "Myeloid": "#FFC10E",
+    "Endothelial": "#F1592C",
+    "Epithelial": "#34A4DD",
+    "Epithelial/Cancer": "#34A4DD",
+    "Epithelial (Duct-like)": "#478FCC",
+    "Epithelial (Neuroendocrine)": "#00BCD4",
+    "Lymphoid": "#607F8C",
+    "Categorical Dark": [
+        "#6829C5", "#1493EA", "#015D5D", "#9E1C56", "#F94E56",
+        "#52040A", "#197E38", "#022C9D", "#ED5498", "#B18500", 
+        "#039D9B", "#8A3701", "#A66EFE"
+    ],
+    "10X": "#6929c5",
+    "Segger Embedding": "#b2373b",
+    "Segger": "#ba4e00",
+    "10X Nucleus": "#ee5398",
+    "Baysor": "#1192e9"
+}
