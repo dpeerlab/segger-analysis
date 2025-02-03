@@ -6,6 +6,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import pyplot as plt
 import math
 from pathlib import Path
+from sg_utils.pl.utils import lighten_color
 
 def format_ax(
     fig, ax,
@@ -146,6 +147,7 @@ def plot_embedding(
     arrow_len: float = 0.2,
     draw_arrows=False,
     rasterized=False,
+    cbar=True,
     **kwargs,
 ):
     iterify = lambda x: x if isinstance(x, Iterable) and not isinstance(x, str) else [x]
@@ -174,6 +176,7 @@ def plot_embedding(
                 show=False,
                 palette=palette, cmap=cmap,
                 layer=layer,
+                colorbar_loc=None,
                 **kwargs,
             )
             if rasterized:
@@ -186,17 +189,6 @@ def plot_embedding(
         else:
             ax.set_visible(False)
     return fig
-
-
-def lighten_color(color, amount=0.5):
-    import matplotlib.colors as mc
-    import colorsys
-    try:
-        c = mc.cnames[color]
-    except:
-        c = color
-    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
-    return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
 
 def saturate(c, s=1.0):

@@ -25,6 +25,7 @@ def plot_segmentation(
     transcript_styles: dict = {},
     negative_styles: dict = {},
     boundary_styles: dict = {},
+    outlines: bool = False,
 ):
     if xlim is None:
         xlim = transcripts[x].min(), transcripts[x].max()
@@ -79,6 +80,7 @@ def plot_segmentation(
             ax,
             cell_styles=boundary_styles,
             outline_styles=outline_styles,
+            show_outlines=outlines,
         )
 
     # Formatting
@@ -90,8 +92,10 @@ def plot_segmentation_boundaries(
     ax: axis.Axis,
     cell_styles: dict = {},
     outline_styles: dict = {},
+    show_outlines: bool = False,
 ):
     # Plot cell outlines
+    
     vertices = boundaries.geometry.apply(
         lambda x: list(zip(*x.exterior.coords.xy))
     )
@@ -101,40 +105,41 @@ def plot_segmentation_boundaries(
     ax.add_collection(collection)
 
     # All cell borders
-    outlines = shapely.unary_union(boundaries.geometry.buffer(2))
-    outlines = outlines.buffer(-4).buffer(2)
-    ext_vertices = []
-    int_vertices = []
-    for contour in list(outlines.geoms):
-        v = list(zip(*contour.exterior.coords.xy))
-        ext_vertices.append(v)
-        for interior in contour.interiors:
-            # Heuristic cutoff for large interior outlines
-            if interior.crosses(boundaries).sum().gt(8).all():
-                v = list(zip(*interior.coords.xy))
-                int_vertices.append(v)
+    if show_outlines:
+        outlines = shapely.unary_union(boundaries.geometry.buffer(2))
+        outlines = outlines.buffer(-4).buffer(2)
+        ext_vertices = []
+        int_vertices = []
+        for contour in list(outlines.geoms):
+            v = list(zip(*contour.exterior.coords.xy))
+            ext_vertices.append(v)
+            for interior in contour.interiors:
+                # Heuristic cutoff for large interior outlines
+                if interior.crosses(boundaries).sum() > 3:
+                    v = list(zip(*interior.coords.xy))
+                    int_vertices.append(v)
 
-    # Exterior outlines
-    defaults = dict(linewidths=0.75, facecolors=[0]*4, edgecolors='w')
-    defaults.update(outline_styles)
-    ext_collection = PolyCollection(ext_vertices, **defaults)
-    ax.add_collection(ext_collection)
+        # Exterior outlines
+        defaults = dict(linewidths=0.75, facecolors=[0]*4, edgecolors='w')
+        defaults.update(outline_styles)
+        ext_collection = PolyCollection(ext_vertices, **defaults)
+        ax.add_collection(ext_collection)
 
-    # Interior outlines
-    defaults['linewidths'] *= 0.75
-    int_collection = PolyCollection(int_vertices, **defaults)
-    ax.add_collection(int_collection)
+        # Interior outlines
+        defaults['linewidths'] *= 0.75
+        int_collection = PolyCollection(int_vertices, **defaults)
+        ax.add_collection(int_collection)
 
 
 def format_ax(
     ax: axis.Axis,
-    xlim: Tuple[float],
-    ylim: Tuple[float],
+    region: shapely.Polygon,
 ):
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
-    ax.set_xticks(xlim)
-    ax.set_yticks(ylim)
+    xmin, ymin, xmax, ymax = region.bounds
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.set_xticks([xmin, xmax])
+    ax.set_yticks([ymin, ymax])
     fmt = ticker.FormatStrFormatter('%d µm')
     ax.xaxis.set_major_formatter(fmt)
     ax.yaxis.set_major_formatter(fmt)

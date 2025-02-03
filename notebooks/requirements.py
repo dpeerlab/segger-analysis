@@ -4,6 +4,7 @@ analysis notebooks for "Title"
 by Heidari et al (DOI: )
 '''
 # Packages used throughout
+from pandas.errors import DtypeWarning
 from matplotlib import pyplot as plt
 from pathlib import Path
 import geopandas as gpd
@@ -29,10 +30,9 @@ warnings.filterwarnings(
     "The default of observed=False is deprecated",
     category=FutureWarning,
 )
-warnings.filterwarnings(
-    "ignore",
-    category=UserWarning,
-)
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=DtypeWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Standard variables referenced throughout
 base_dir = Path(__file__).parents[1]

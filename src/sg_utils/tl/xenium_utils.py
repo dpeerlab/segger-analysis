@@ -1,3 +1,4 @@
+from typing import List
 import pandas as pd
 import scanpy as sc
 import numpy as np
@@ -8,6 +9,7 @@ def anndata_from_transcripts(
     transcripts: pd.DataFrame,
     cell_label: str,
     gene_label: str,
+    coordinate_labels: List[str] = None,
 ):
     # Feature names to indices
     ids_cell, labels_cell = pd.factorize(transcripts[cell_label])
@@ -39,5 +41,12 @@ def anndata_from_transcripts(
         var=pd.DataFrame(index=labels_gene),
     )
     adata.raw = adata.copy()
+
+    # Add spatial coords
+    if coordinate_labels is not None:
+        coords = transcripts[coordinate_labels]
+        centroids = coords.groupby(transcripts[cell_label]).mean()
+        idx = adata.obs.index.astype(transcripts[cell_label].dtype)
+        adata.obsm['X_spatial'] = centroids.loc[idx].values
     
     return adata

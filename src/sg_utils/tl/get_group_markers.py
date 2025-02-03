@@ -52,8 +52,8 @@ def _get_markers(
     yp = model.predict(l2.values.reshape(-1,1))
     residuals = l1 - yp
     markers = l2.index[
-        residuals.abs().le(max_residual) & \
-        yi.ge(min_difference)
+        residuals.ge(-max_residual)
+        & yi.ge(min_difference)
     ]
 
     if plot:
