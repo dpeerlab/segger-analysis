@@ -341,10 +341,17 @@ def generate_boundaries(df, x="x_location", y="y_location", cell_id="segger_cell
 def generate_boundary(t, x="x_location", y="y_location"):
     if len(t) < 3:
         return None
-
     bi = BoundaryIdentification(t[[x, y]].values)
     bi.calculate_part_1(plot=False)
     bi.calculate_part_2(plot=False)
     geom = bi.find_cycles()
 
     return geom
+
+
+
+
+def extract_largest_polygon(geom):
+    if isinstance(geom, MultiPolygon):
+        return max(geom.geoms, key=lambda p: p.area)  # Keep the largest polygon
+    return geom  # Keep the original polygon if it's already a Polygon
