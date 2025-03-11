@@ -13,7 +13,7 @@ The datasets used in this study are publicly available and can be accessed as fo
 
 ### AWS-hosted datasets for this publication  
 - **Xenium Breast Cancer Dataset:**  
-  [Download (tar.gz)](https://dp-lab-data-public.s3.us-east-1.amazonaws.com/segger/xenium_breast.tar.gz)  
+  [Download (tar.gz)](https://dp-lab-data-public.s3.us-east-1.amazonaws.com/segger/xenium_breast.tar)  
 - **Xenium Colon Dataset:**  
   [Download (tar.gz)](https://dp-lab-data-public.s3.us-east-1.amazonaws.com/segger/xenium_colon.tar.gz)  
 - **Xenium NSCLC Dataset:**  
@@ -31,11 +31,11 @@ The datasets used in this study are publicly available and can be accessed as fo
 Run the following commands to download and extract the datasets:  
 
 ```sh
-wget https://dp-lab-data-public.s3.us-east-1.amazonaws.com/segger/xenium_breast.tar.gz
+wget https://dp-lab-data-public.s3.us-east-1.amazonaws.com/segger/xenium_breast.tar
 wget https://dp-lab-data-public.s3.us-east-1.amazonaws.com/segger/xenium_colon.tar.gz
 wget https://dp-lab-data-public.s3.us-east-1.amazonaws.com/segger/xenium_nsclc.tar.gz
 
-tar -xvzf xenium_breast.tar.gz
+tar -xvf xenium_breast.tar
 tar -xvzf xenium_colon.tar.gz
 tar -xvzf xenium_nsclc.tar.gz
 ```
