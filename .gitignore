@@ -168,4 +168,5 @@ results/*
 
 .DS_*
 data_share/*
+media_share/*
 notebooks/
