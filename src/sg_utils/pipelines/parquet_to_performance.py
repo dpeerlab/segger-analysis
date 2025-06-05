@@ -80,7 +80,7 @@ LOGGER.setLevel(logging.INFO)
 # Helper functions (kept private – not exported)                                  #
 ###################################################################################
 
-def _filter_transcripts(df: pd.DataFrame, min_qv: float = 30.0, gene_label = "feature_name") -> pd.DataFrame:
+def _filter_transcripts(df: pd.DataFrame, min_qv: float = 30.0, min_score: float =0.0, score_label="score", gene_label = "feature_name") -> pd.DataFrame:
     """Remove low‑quality or control probe transcripts."""
     filter_codewords = (
         "NegControlProbe_",
@@ -97,7 +97,14 @@ def _filter_transcripts(df: pd.DataFrame, min_qv: float = 30.0, gene_label = "fe
         mask = ~df[gene_label].str.startswith(filter_codewords)
     else:
          mask = df["qv"].ge(min_qv) & ~df[gene_label].str.startswith(filter_codewords)
-    return df.loc[mask]
+    result = df.loc[mask]
+    if score_label in df.columns:
+        result = result[result[score_label] >= min_score]
+    if result.empty:
+        raise ValueError(
+            f"No transcripts remaining after filtering with qv >= {min_qv} and {score_label} >= {min_score}."
+        )
+    return result
 
 
 def _load_and_filter_transcripts(
@@ -105,12 +112,14 @@ def _load_and_filter_transcripts(
     seg_col: str,
     n_sample: int | None = None,
     min_qv: float = 30.0,
+    min_score: float = 0.0,
+    score_label: str = "score",
     gene_label: str = "feature_name",
 ) -> pd.DataFrame:
     if not parquet_path.exists():
         raise FileNotFoundError(parquet_path)
     df = pd.read_parquet(parquet_path)
-    df = _filter_transcripts(df, min_qv=min_qv, gene_label=gene_label)
+    df = _filter_transcripts(df, min_qv=min_qv, gene_label=gene_label, score_label=score_label, min_score=min_score)
 
     # Optional Segger score filter (if present)
     if "segger" in seg_col.lower():
@@ -167,6 +176,7 @@ def _save_umap(ad: sc.AnnData, color, fname: Path, title: str | None = None):
     sc.pl.umap(ad, color=color, show=False)
     if title:
         plt.gca().set_title(title)
+        plt.gcf().set_size_inches(10, 4)
     plt.tight_layout()
     plt.savefig(fname)
     plt.close()
@@ -184,11 +194,11 @@ def parquet_to_performance_pipeline(
     # Identification columns
     seg_col: str = "cell_boundaries_id",
     score_col: str = "score",
+    min_score: float = 0.0,
     coords: Tuple[str, str] = ("global_x", "global_y"),
     gene_label: str = "feature_name",
     # Sampling & geometry
     n_sample: int | None = None,
-    pixel_um: float = 0.1625,
     # Pre‑processing hyper‑parameters
     filter_min_counts: int = 5,
     pca_total_var: float = 0.75,
@@ -205,6 +215,8 @@ def parquet_to_performance_pipeline(
     # Misc
     overwrite: bool = True,
     verbose: bool = False,
+    # For plot names
+    sample_name: str | None = "Sample",  # Used in plot titles and file names
 ) -> pd.DataFrame:
     """Run the full CosMx/Xenium benchmark and return summary metrics.
 
@@ -250,9 +262,9 @@ def parquet_to_performance_pipeline(
         sns.histplot(raw_df[score_col].dropna(), bins=50)
         plt.xlabel("Segger score")
         plt.ylabel("Count")
-        plt.title("Distribution of Segger confidence scores")
+        plt.title(f"Distribution of {sample_name} Segger confidence scores")
         plt.tight_layout()
-        plt.savefig(save_dir / "segger_score_distribution.png")
+        plt.savefig(save_dir / f"segger_score_distribution.png")
         plt.close()
         LOGGER.info("Segger score distribution plot saved.")
     else:
@@ -265,7 +277,7 @@ def parquet_to_performance_pipeline(
             f"Required columns '{seg_col}', {coords}, or '{gene_label}' not found in the parquet file."
         )
     # 1. Load → filter transcripts → AnnData
-    df = _load_and_filter_transcripts(parquet_path, seg_col, n_sample, gene_label=gene_label)
+    df = _load_and_filter_transcripts(parquet_path, seg_col, n_sample, gene_label=gene_label, score_label=score_col, min_score=min_score)
 
     adata = _build_anndata(df, seg_col, coords, gene_label)
 
@@ -337,11 +349,11 @@ def parquet_to_performance_pipeline(
     if "X_umap" not in scRNAseq.obsm:
         sc.pp.neighbors(scRNAseq, n_neighbors=knn_neighbors)
         sc.tl.umap(scRNAseq, min_dist=umap_min_dist)
-    _save_umap(scRNAseq, "cell_type", save_dir / "reference_umap.png", "Reference atlas")
+    _save_umap(scRNAseq, "cell_type", save_dir / "reference_umap.png", f"{sample_name} Reference atlas")
 
     if "X_umap" not in adata.obsm:
         sc.tl.umap(adata, min_dist=umap_min_dist)
-    _save_umap(adata, ["celltypist_label"], save_dir / "query_umap.png", "Query – CellTypist")
+    _save_umap(adata, ["celltypist_label"], save_dir / f"{sample_name}_umap.png", f"{sample_name} UMAP")
 
     # 8. Marker‑based metrics
     markers = find_markers(
@@ -377,6 +389,7 @@ def parquet_to_performance_pipeline(
         sns.barplot(x=[row.Metric], y=[row.Value], ax=ax)
         ax.set_ylabel(row.Metric)
         plt.tight_layout()
+        plt.title(f"{sample_name} {row.Metric}")
         plt.savefig(save_dir / f"plot_{row.Metric.lower().replace(' ', '_')}.png")
         plt.close()
 

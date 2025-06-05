@@ -270,8 +270,5 @@ def calculate_sensitivity(
             sensitivity = positive_counts / total_counts if total_counts > 0 else 0
             sensitivity_results[cell_type].append(sensitivity)
 
-            if i < 3:  # Show first 3 cell summaries
-                print(f"    Cell {i} - Total counts: {total_counts}, Positive: {positive_counts}, Sensitivity: {sensitivity:.3f}")
-
         print(f"  Finished {cell_type}. Avg sensitivity: {np.mean(sensitivity_results[cell_type]):.3f}")
     return sensitivity_results
