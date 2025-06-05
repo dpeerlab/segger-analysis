@@ -5,7 +5,7 @@ import rtree.index
 from scipy.spatial import Delaunay
 from shapely.geometry import MultiPolygon, Polygon
 from tqdm import tqdm
-
+from scipy.spatial import QhullError
 
 def vector_angle(v1, v2):
     # Calculate the dot product and magnitudes of vectors
@@ -48,10 +48,8 @@ def dfs(v, graph, path, colors):
         if colors[d] == 0:
             dfs(d, graph, path, colors)
 
-
 def plot_points(points, s=3, color="black", zorder=None):
     plt.scatter(points[:, 0], points[:, 1], color=color, s=s, zorder=zorder)
-
 
 def plot_edges(edges, d_max, part=1):
     if part == 1:
@@ -325,11 +323,50 @@ class BoundaryIdentification:
         return cycles
 
 
-def generate_boundaries(df, x="x_location", y="y_location", cell_id="segger_cell_id"):
+def generate_boundaries(
+    df, 
+    x="x_location", 
+    y="y_location", 
+    cell_id="segger_cell_id", 
+    handle_errors=True, 
+    min_transcripts_per_cell=3
+):
+    """
+    Generate cell boundaries from grouped cell data, optionally handling errors per cell.
+    
+    Parameters:
+        df: pd.DataFrame – Input dataframe with transcript coordinates
+        x: str – Column name for x-coordinate
+        y: str – Column name for y-coordinate
+        cell_id: str – Column name identifying each cell
+        handle_errors: bool – Whether to handle errors per cell gracefully
+        min_transcripts_per_cell: int – Minimum number of transcripts required to attempt boundary generation
+
+    Returns:
+        gpd.GeoDataFrame – A GeoDataFrame with cell_id, transcript count, and boundary geometry
+    """
     res = []
     group_df = df.groupby(cell_id)
-    for cell_id, t in tqdm(group_df, total=group_df.ngroups):
-        res.append({"cell_id": cell_id, "length": len(t), "geom": generate_boundary(t, x=x, y=y)})
+    print(f"Processing {group_df.ngroups} cells for boundary generation...")
+    for cell_val, t in tqdm(group_df, total=group_df.ngroups, desc="Generating Boundaries"):
+        geom = None  # default fallback geometry
+        num_transcripts = len(t)
+
+        if num_transcripts < min_transcripts_per_cell:
+            print(f"Skipping cell {cell_val} with only {num_transcripts} transcripts (min required: {min_transcripts_per_cell})")
+        else:
+            if handle_errors:
+                try:
+                    geom = generate_boundary(t, x=x, y=y)
+                except QhullError as qe:
+                    print(f"QhullError for cell {cell_val}: {qe}")
+                except ValueError as ve:
+                    print(f"ValueError for cell {cell_val}: {ve}")
+                except Exception as e:
+                    print(f"Unexpected error for cell {cell_val}: {e}")
+            else:
+                geom = generate_boundary(t, x=x, y=y)
+        res.append({"cell_id": cell_val, "length": num_transcripts, "geom": geom})
 
     return gpd.GeoDataFrame(
         data=[[b["cell_id"], b["length"]] for b in res],

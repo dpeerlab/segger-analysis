@@ -1,14 +1,15 @@
+import warnings
+import cupy as cp
+import cupyx
+import cuml
 from sg_utils.tl.phenograph_rapids import phenograph_rapids
 from tqdm import tqdm
 import scanpy as sc
 import pandas as pd
 import numpy as np
 import scipy as sp
-import cupy as cp
 import warnings
 import logging
-import cupyx
-import cuml
 import sys
 import os
 
@@ -132,7 +133,7 @@ def preprocess_rapids(
 
         # Median library-size normalization
         pbar.set_description("Normalization")
-        adata.layers['norm'] = adata.raw.X.copy()
+        adata.layers['norm'] = adata.X.copy()
         sc.pp.normalize_total(adata, layer='norm')
         
         # Log-transformation (natural log, pseudocount of 1)

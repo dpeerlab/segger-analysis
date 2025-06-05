@@ -171,24 +171,51 @@ def compute_MECR(adata: ad.AnnData, gene_pairs: List[Tuple[str, str]]) -> Dict[T
     -------
     Dict[Tuple[str, str], float]
         Dictionary mapping gene pairs to their MECR values.
-    """
+        Returns np.nan for pairs where one or both genes are not found in adata.
+    """    
     mecr_dict = {}
-    gene_expression = adata.to_df()
+    try:
+        gene_expression_df = adata.to_df()        
+    except Exception as e:                
+        for gene1, gene2 in gene_pairs:
+            mecr_dict[(gene1, gene2)] = np.nan
+        return mecr_dict
 
+    pair_counter = 0
     for gene1, gene2 in gene_pairs:
-        expr_gene1 = gene_expression[gene1] > 0
-        expr_gene2 = gene_expression[gene2] > 0
+        pair_counter += 1
 
-        both_expressed = (expr_gene1 & expr_gene2).mean()
-        at_least_one_expressed = (expr_gene1 | expr_gene2).mean()
+        # Check if genes exist in the DataFrame's columns (i.e., were in adata.var_names)
+        if gene1 not in gene_expression_df.columns:            
+            mecr_dict[(gene1, gene2)] = np.nan
+            continue  # Skip to the next pair
+        if gene2 not in gene_expression_df.columns:            
+            mecr_dict[(gene1, gene2)] = np.nan
+            continue  # Skip to the next pair
+
+        # Extract binarized expression (True if expression > 0, False otherwise)
+        expr_gene1_series = gene_expression_df[gene1] # Raw expression Series for gene1
+        expr_gene2_series = gene_expression_df[gene2] # Raw expression Series for gene2
+
+        expr_gene1_bool = expr_gene1_series > 0  # Boolean Series for gene1
+        expr_gene2_bool = expr_gene2_series > 0  # Boolean Series for gene2
         
-        mecr_dict[(gene1, gene2)] = both_expressed / at_least_one_expressed if at_least_one_expressed > 0 else 0
+        both_expressed_proportion = (expr_gene1_bool & expr_gene2_bool).mean()
+        at_least_one_expressed_proportion = (expr_gene1_bool | expr_gene2_bool).mean()
+        
+        mecr_value = 0.0 # Default value as per original logic if at_least_one_expressed_proportion is 0
+        if at_least_one_expressed_proportion > 0:
+            mecr_value = both_expressed_proportion / at_least_one_expressed_proportion            
+        mecr_dict[(gene1, gene2)] = mecr_value
 
     return mecr_dict
 
 
 def calculate_sensitivity(
-    adata: ad.AnnData, purified_markers: Dict[str, Dict[str, List[str]]], max_cells_per_type: int = 1000
+    adata: ad.AnnData,
+    purified_markers: Dict[str, Dict[str, List[str]]],
+    max_cells_per_type: int = 1000,
+    cell_type_column: str = "celltype_major"
 ) -> Dict[str, List[float]]:
     """
     Calculate sensitivity of purified markers for each cell type.
@@ -201,6 +228,8 @@ def calculate_sensitivity(
         Dictionary mapping cell types to positive and negative markers.
     max_cells_per_type : int, default=1000
         Maximum number of cells to consider per cell type.
+    cell_type_column : str, default="celltype_major"
+        Column in adata.obs containing cell type annotations.
 
     Returns:
     -------
@@ -210,19 +239,39 @@ def calculate_sensitivity(
     sensitivity_results = {cell_type: [] for cell_type in purified_markers.keys()}
 
     for cell_type, markers in purified_markers.items():
-        positive_markers = markers["positive"]
-        subset = adata[adata.obs["celltype_major"] == cell_type]
+        positive_markers = markers.get("positive", [])
+
+        subset = adata[adata.obs[cell_type_column] == cell_type]
+        if subset.n_obs == 0:
+            continue
 
         if subset.n_obs > max_cells_per_type:
             cell_indices = np.random.choice(subset.n_obs, max_cells_per_type, replace=False)
             subset = subset[cell_indices]
 
-        for cell_counts in subset.X:
-            positive_indices = subset.var_names.get_indexer(positive_markers)
+        positive_indices = subset.var_names.get_indexer(positive_markers)
+        missing_count = (positive_indices == -1).sum()
+        print(f"  {missing_count} markers not found in subset.var_names")
+
+        # Filter out invalid indices
+        valid_indices = positive_indices[positive_indices >= 0]
+        if len(valid_indices) == 0:
+            print("  No valid marker genes found in this subset. Skipping.")
+            continue
+        for i, cell_counts in enumerate(subset.X):
             total_counts = cell_counts.sum()
-            positive_counts = cell_counts[positive_indices].sum() if positive_markers else 0
-            
+
+            try:
+                positive_counts = cell_counts[:, valid_indices].sum()
+            except IndexError as e:
+                print(f"  [ERROR] IndexError at cell {i}: {e}")
+                continue
+
             sensitivity = positive_counts / total_counts if total_counts > 0 else 0
             sensitivity_results[cell_type].append(sensitivity)
 
+            if i < 3:  # Show first 3 cell summaries
+                print(f"    Cell {i} - Total counts: {total_counts}, Positive: {positive_counts}, Sensitivity: {sensitivity:.3f}")
+
+        print(f"  Finished {cell_type}. Avg sensitivity: {np.mean(sensitivity_results[cell_type]):.3f}")
     return sensitivity_results
