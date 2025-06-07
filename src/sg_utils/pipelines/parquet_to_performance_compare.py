@@ -57,6 +57,7 @@ def parquet_to_performance_pipeline_compare(
     reference_h5ad: str | Path,
     save_dir: str | Path,
     seg_cols: Iterable[str],
+    min_scores: Iterable[float],
     # The following kwargs are forwarded to the per‑method pipeline
     score_col: str | None = None,
     **pipeline_kwargs,
@@ -94,7 +95,7 @@ def parquet_to_performance_pipeline_compare(
 
     all_records: List[dict] = []
 
-    for seg in seg_cols:
+    for index, seg in enumerate(seg_cols):
         LOGGER.info("\n―― Running pipeline for seg_col='%s' ――", seg)
         subdir = save_dir / seg
         summary_df = parquet_to_performance_pipeline(
@@ -104,6 +105,7 @@ def parquet_to_performance_pipeline_compare(
             seg_col=seg,
             score_col=score_col,
             overwrite=True,
+            min_score=min_scores[index],
             **pipeline_kwargs,
         )
         # reshape to long format and append method column
