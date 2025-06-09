@@ -56,6 +56,7 @@ from scipy.spatial import QhullError
 
 import celltypist as ct  # type: ignore
 
+sc.settings.random_state = 42
 # Project‑local helpers
 from sg_utils.tl.xenium_utils import anndata_from_transcripts
 from sg_utils.pp.preprocess_rapids import preprocess_rapids
@@ -99,6 +100,7 @@ def _filter_transcripts(df: pd.DataFrame, min_qv: float = 30.0, min_score: float
          mask = df["qv"].ge(min_qv) & ~df[gene_label].str.startswith(filter_codewords)
     result = df.loc[mask]
     if score_label in df.columns:
+        print(f"Filtering transcripts with {score_label} >= {min_score}")
         result = result[result[score_label] >= min_score]
     if result.empty:
         raise ValueError(
@@ -173,13 +175,16 @@ def _harmonise_genes(query: sc.AnnData, reference: sc.AnnData):
 
 
 def _save_umap(ad: sc.AnnData, color, fname: Path, title: str | None = None):
-    sc.pl.umap(ad, color=color, show=False)
-    if title:
-        plt.gca().set_title(title)
-        plt.gcf().set_size_inches(10, 4)
-    plt.tight_layout()
-    plt.savefig(fname)
-    plt.close()
+    """
+    Saves a UMAP plot, ensuring the legend and title are not cut off.
+    """    
+    fig, ax = plt.subplots(figsize=(10, 7))
+    sc.pl.umap(ad, color=color, ax=ax, show=False)
+    if title:    
+        ax.set_title(title)
+    fig.tight_layout()
+    fig.savefig(fname, bbox_inches='tight')
+    plt.close(fig)
 
 ###################################################################################
 # Public pipeline                                                                 #
@@ -307,7 +312,7 @@ def parquet_to_performance_pipeline(
     # 4. CellTypist model training
     #   – sample for class balance then train a fresh model (fast for <50k cells)
     sample_idx = (
-        scRNAseq.obs.groupby("cell_type").sample(ct_subsample_per_type, replace=True).index.drop_duplicates()
+        scRNAseq.obs.groupby("cell_type").sample(ct_subsample_per_type, replace=True, random_state=42).index.drop_duplicates()
     )
     scRNAseq.layers["norm_100"] = scRNAseq.X.copy()
     sc.pp.normalize_total(scRNAseq, layer="norm_100", target_sum=1e2)
@@ -322,6 +327,7 @@ def parquet_to_performance_pipeline(
         check_expression=False,
         n_jobs=os.cpu_count() or 32,
         max_iter=100,
+        random_state=42,
     )
 
     # 5. Query normalisation (100 UMI per cell; log‑transform)

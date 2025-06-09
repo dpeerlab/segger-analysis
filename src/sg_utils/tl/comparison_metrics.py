@@ -215,7 +215,8 @@ def calculate_sensitivity(
     adata: ad.AnnData,
     purified_markers: Dict[str, Dict[str, List[str]]],
     max_cells_per_type: int = 1000,
-    cell_type_column: str = "celltype_major"
+    cell_type_column: str = "celltype_major",
+    random_state: int = 42
 ) -> Dict[str, List[float]]:
     """
     Calculate sensitivity of purified markers for each cell type.
@@ -236,6 +237,7 @@ def calculate_sensitivity(
     Dict[str, List[float]]
         Sensitivity values for each cell type.
     """
+    rng = np.random.default_rng(random_state)
     sensitivity_results = {cell_type: [] for cell_type in purified_markers.keys()}
 
     for cell_type, markers in purified_markers.items():
@@ -246,7 +248,7 @@ def calculate_sensitivity(
             continue
 
         if subset.n_obs > max_cells_per_type:
-            cell_indices = np.random.choice(subset.n_obs, max_cells_per_type, replace=False)
+            cell_indices = rng.choice(subset.n_obs, max_cells_per_type, replace=False)
             subset = subset[cell_indices]
 
         positive_indices = subset.var_names.get_indexer(positive_markers)

@@ -119,6 +119,7 @@ def preprocess_rapids(
     umap_n_epochs: int = 1000,
     phenograph_resolution: float = 1,
     umap_kwargs: dict = None,
+    random_state: int = 42,
 ):
     with tqdm(total=6) as pbar:
         # Filtering
@@ -173,6 +174,7 @@ def preprocess_rapids(
                     min_dist=umap_min_dist,
                     n_epochs=umap_n_epochs,
                     n_neighbors=knn_neighbors,
+                    random_state=random_state,
                     **umap_kwargs,
                 )
                 model.fit(X=X_pca[:, :n_pcs])
