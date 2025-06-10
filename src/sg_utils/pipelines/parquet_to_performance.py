@@ -123,16 +123,6 @@ def _load_and_filter_transcripts(
     df = pd.read_parquet(parquet_path)
     df = _filter_transcripts(df, min_qv=min_qv, gene_label=gene_label, score_label=score_label, min_score=min_score)
 
-    # Optional Segger score filter (if present)
-    if "segger" in seg_col.lower():
-        score_col = seg_col.replace("segger_cell_id", "score")
-        if score_col in df.columns:
-            df = df[df[score_col] > 0.75]
-        else:
-            LOGGER.warning(
-                "Segger score column '%s' not found – skipping score filter.", score_col
-            )
-
     if n_sample is not None:
         df = df.sample(n=n_sample, random_state=42)
     return df
@@ -217,6 +207,8 @@ def parquet_to_performance_pipeline(
     neg_percentile: int = 10,
     pct_expressed: int = 50,
     max_cells_per_type: int = 2000,
+    ct_iterations: int = 100,
+    ct_log: int = 100,
     # Misc
     overwrite: bool = True,
     verbose: bool = False,
@@ -315,7 +307,7 @@ def parquet_to_performance_pipeline(
         scRNAseq.obs.groupby("cell_type").sample(ct_subsample_per_type, replace=True, random_state=42).index.drop_duplicates()
     )
     scRNAseq.layers["norm_100"] = scRNAseq.X.copy()
-    sc.pp.normalize_total(scRNAseq, layer="norm_100", target_sum=1e2)
+    sc.pp.normalize_total(scRNAseq, layer="norm_100", target_sum=ct_log)
     scRNAseq.layers["lognorm_100"] = scRNAseq.layers["norm_100"].copy()
     if "log1p" in scRNAseq.uns:
         del scRNAseq.uns["log1p"]
@@ -326,13 +318,13 @@ def parquet_to_performance_pipeline(
         labels="cell_type",
         check_expression=False,
         n_jobs=os.cpu_count() or 32,
-        max_iter=100,
+        max_iter=ct_iterations,
         random_state=42,
     )
 
     # 5. Query normalisation (100 UMI per cell; log‑transform)
     adata.layers["norm_100"] = adata.raw.X.copy()
-    sc.pp.normalize_total(adata, layer="norm_100", target_sum=1e2)
+    sc.pp.normalize_total(adata, layer="norm_100", target_sum=ct_log)
     adata.layers["lognorm_100"] = adata.layers["norm_100"].copy()
     if "log1p" in adata.uns:
         del adata.uns["log1p"]
@@ -360,6 +352,12 @@ def parquet_to_performance_pipeline(
     if "X_umap" not in adata.obsm:
         sc.tl.umap(adata, min_dist=umap_min_dist)
     _save_umap(adata, ["celltypist_label"], save_dir / f"{sample_name}_umap.png", f"{sample_name} UMAP")
+    
+    # fuse adata and scRNAseq for plotting
+    adata_for_merge = adata.copy()
+    adata_for_merge.obs["cell_type"] = adata_for_merge.obs["celltypist_label"]
+    merged_adata = adata_for_merge.concatenate(scRNAseq, batch_key="dataset", batch_categories=["query", "reference"], index_unique="-")
+    _save_umap(merged_adata, ["cell_type"], save_dir / f"{sample_name}_merged_umap.png", f"{sample_name} Merged UMAP")
 
     # 8. Marker‑based metrics
     markers = find_markers(

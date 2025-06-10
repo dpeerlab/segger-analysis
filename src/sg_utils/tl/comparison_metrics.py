@@ -52,6 +52,7 @@ def find_markers(
     pos_percentile: float = 5,
     neg_percentile: float = 10,
     percentage: float = 50,
+    min_cells: int = 10
 ) -> Dict[str, Dict[str, List[str]]]:
     """
     Identify positive and negative markers for each cell type based on gene expression.
@@ -78,6 +79,12 @@ def find_markers(
     adata.raw = adata  # Ensure raw expression values are used
     adata.var_names_make_unique()
     
+    # if the cell type does not meet minimum cell requirements remove it
+    for cell_type in adata.obs[cell_type_column].unique():
+        if adata.obs[cell_type_column].value_counts()[cell_type] < min_cells:
+            print(f"Removing {cell_type} due to insufficient cells.")
+            adata = adata[adata.obs[cell_type_column] != cell_type]
+
     sc.tl.rank_genes_groups(adata, groupby=cell_type_column)
     
     genes = adata.var_names
