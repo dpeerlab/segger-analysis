@@ -167,13 +167,18 @@ def _harmonise_genes(query: sc.AnnData, reference: sc.AnnData):
 def _save_umap(ad: sc.AnnData, color, fname: Path, title: str | None = None):
     """
     Saves a UMAP plot, ensuring the legend and title are not cut off.
-    """    
+    """
     fig, ax = plt.subplots(figsize=(10, 7))
-    sc.pl.umap(ad, color=color, ax=ax, show=False)
-    if title:    
-        ax.set_title(title)
-    fig.tight_layout()
-    fig.savefig(fname, bbox_inches='tight')
+    sc.pl.umap(
+        ad,
+        color=color,
+        ax=ax,
+        show=False,
+        legend_loc='right margin',  # avoids legend clutter
+        legend_fontsize='small',    # helps if many keys
+        title=title,                # scanpy handles title better here
+    )
+    fig.savefig(fname, bbox_inches='tight', pad_inches=0.3)
     plt.close(fig)
 
 ###################################################################################
@@ -293,6 +298,7 @@ def parquet_to_performance_pipeline(
 
     # Raw count metrics
     adata.obs["raw_count"] = adata.X.sum(axis=1).A1 if hasattr(adata.X, "A1") else np.ravel(adata.X.sum(axis=1))
+    adata.obs[["raw_count"]].to_csv(save_dir / "transcripts_per_cell.csv", index=True)
     median_counts = float(np.median(adata.obs["raw_count"]))
     LOGGER.info("Cells: %d | Median counts: %.1f", adata.n_obs, median_counts)
 
@@ -368,6 +374,13 @@ def parquet_to_performance_pipeline(
         pos_percentile=pos_percentile,
     )
     sens = calculate_sensitivity(adata, markers, max_cells_per_type, "celltypist_label")
+
+    flattened_sens_values = [s for v in sens.values() for s in v]
+    # Create a DataFrame from the flattened values
+    flattened_sens_df = pd.DataFrame({"Sensitivity": flattened_sens_values})
+    # Save the flattened DataFrame to a CSV
+    flattened_sens_df.to_csv(save_dir / "all_gene_sensitivities_flattened.csv", index=False)
+
     excl = find_mutually_exclusive_genes(scRNAseq, markers, "cell_type")
     mecr_raw = compute_MECR(adata, excl)
 
