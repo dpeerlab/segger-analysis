@@ -31,12 +31,14 @@ Example
 ...     save_dir=Path("./brain_pipeline_output"),
 ... )
 >>> summary
-                       Metric      Value
-0             Number of Cells  107493.0000
-1   Average Cell Area (µm²)      -1.0000
-2    Median Counts per Cell     304.0000
-3  Overall Median Sensitivity      0.1511
-4   Overall Median MECR      0.0451
+                               Metric      Value
+0                       Number of Cells  107493.0000
+1             Average Cell Area (µm²)      -1.0000
+2              Median Counts per Cell     304.0000
+3            Overall Median Sensitivity      0.1511
+4   Median of Celltype Median Sensitivity      0.1495
+5                 Overall Median MECR      0.0451
+
 """
 from __future__ import annotations
 
@@ -385,12 +387,13 @@ def parquet_to_performance_pipeline_from_mapping(
         sens = calculate_sensitivity(adata_main_annotated, markers, max_cells_per_type, external_annotation_label)
         mecr_raw = compute_MECR(adata_main_annotated, excl)
         overall_sens = float(np.nanmedian([s for v in sens.values() for s in v]))
+        median_of_celltype_median_sens = float(np.nanmedian([np.nanmedian(v) for v in sens.values()]))
         overall_mecr = float(np.nanmedian(list(mecr_raw.values())))
         median_counts = float(np.median(adata_main_annotated.X.sum(axis=1).A1))
 
         summary_s1 = pd.DataFrame({
-            "Metric": ["Number of Cells", "Median Counts per Cell", "Overall Median Sensitivity", "Overall Median MECR"],
-            "Value": [adata_main_annotated.n_obs, median_counts, overall_sens, overall_mecr],
+            "Metric": ["Number of Cells", "Median Counts per Cell", "Overall Median Sensitivity", "Median of Celltype Median Sensitivity", "Overall Median MECR"],
+            "Value": [adata_main_annotated.n_obs, median_counts, overall_sens, median_of_celltype_median_sens, overall_mecr],
         })
         summary_s1.to_csv(s1_save_dir / "summary_metrics.csv", index=False)
         LOGGER.info("Scenario 1 Summary:\n%s", summary_s1)
@@ -438,13 +441,14 @@ def parquet_to_performance_pipeline_from_mapping(
         sens_s2 = calculate_sensitivity(adata, markers, max_cells_per_type, "celltypist_label")
         mecr_raw_s2 = compute_MECR(adata, excl)
         overall_sens_s2 = float(np.nanmedian([s for v in sens_s2.values() for s in v]))
+        median_of_celltype_median_sens_s2 = float(np.nanmedian([np.nanmedian(v) for v in sens_s2.values()]))
         overall_mecr_s2 = float(np.nanmedian(list(mecr_raw_s2.values())))
         median_counts_s2 = float(np.median(adata.raw.X.sum(axis=1).A1))
          
 
         summary_s2 = pd.DataFrame({
-            "Metric": ["Number of Cells", "Median Counts per Cell", "Overall Median Sensitivity", "Overall Median MECR"],
-            "Value": [adata.n_obs, median_counts_s2, overall_sens_s2, overall_mecr_s2],
+            "Metric": ["Number of Cells", "Median Counts per Cell", "Overall Median Sensitivity", "Median of Celltype Median Sensitivity", "Overall Median MECR"],
+            "Value": [adata.n_obs, median_counts_s2, overall_sens_s2, median_of_celltype_median_sens_s2, overall_mecr_s2],
         })
         summary_s2.to_csv(s2_save_dir / "summary_metrics.csv", index=False)
         LOGGER.info("Scenario 2 Summary:\n%s", summary_s2)
@@ -454,9 +458,9 @@ def parquet_to_performance_pipeline_from_mapping(
         adata.write(s2_save_dir / "final_adata.h5ad", compression="gzip")
         # more stats to save
         sens_df = pd.DataFrame({"Cell Type": sens.keys(), "Median Sensitivity": [np.nanmedian(v) for v in sens.values()]})
-        sens_df.to_csv(save_dir / "sensitivity_by_celltype.csv", index=False)
+        sens_df.to_csv(s2_save_dir / "sensitivity_by_celltype.csv", index=False)
         mecr_df = pd.DataFrame({"Cell Type": mecr_raw.keys(), "MECR": mecr_raw.values()})
-        mecr_df.to_csv(save_dir / "mecr_by_celltype.csv", index=False)
+        mecr_df.to_csv(s2_save_dir / "mecr_by_celltype.csv", index=False)
 
         final_summary = summary_s2
 

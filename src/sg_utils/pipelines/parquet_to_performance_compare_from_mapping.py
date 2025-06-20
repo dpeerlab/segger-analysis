@@ -113,7 +113,7 @@ def parquet_to_performance_pipeline_compare_from_mapping(
             all_records.append({"Method": seg, "Metric": row.Metric, "Value": row.Value})
 
     combined_df = pd.DataFrame(all_records)
-    combined_df.to_csv(save_dir / "combined_summary.csv", index=False)
+    combined_df.to_csv(save_dir / "cell_typist_combined_summary.csv", index=False)
 
     # ------------------------------------------------------------------
     # Comparison bar plots (one figure per metric)
