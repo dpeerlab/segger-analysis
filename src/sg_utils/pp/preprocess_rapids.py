@@ -1,14 +1,15 @@
+import warnings
+import cupy as cp
+import cupyx
+import cuml
 from sg_utils.tl.phenograph_rapids import phenograph_rapids
 from tqdm import tqdm
 import scanpy as sc
 import pandas as pd
 import numpy as np
 import scipy as sp
-import cupy as cp
 import warnings
 import logging
-import cupyx
-import cuml
 import sys
 import os
 
@@ -118,6 +119,7 @@ def preprocess_rapids(
     umap_n_epochs: int = 1000,
     phenograph_resolution: float = 1,
     umap_kwargs: dict = None,
+    random_state: int = 42,
 ):
     with tqdm(total=6) as pbar:
         # Filtering
@@ -132,7 +134,7 @@ def preprocess_rapids(
 
         # Median library-size normalization
         pbar.set_description("Normalization")
-        adata.layers['norm'] = adata.raw.X.copy()
+        adata.layers['norm'] = adata.X.copy()
         sc.pp.normalize_total(adata, layer='norm')
         
         # Log-transformation (natural log, pseudocount of 1)
@@ -172,6 +174,7 @@ def preprocess_rapids(
                     min_dist=umap_min_dist,
                     n_epochs=umap_n_epochs,
                     n_neighbors=knn_neighbors,
+                    random_state=random_state,
                     **umap_kwargs,
                 )
                 model.fit(X=X_pca[:, :n_pcs])

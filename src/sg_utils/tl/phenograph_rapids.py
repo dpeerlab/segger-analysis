@@ -1,3 +1,4 @@
+import warnings
 import cudf
 import cugraph
 import cupy
@@ -30,8 +31,8 @@ def _run_phenograph(
     # Build kNN graph in GPU
     n, k = indices.shape
     edges = cudf.concat([
-        cudf.Series(np.repeat(np.arange(n), k), name='source'), # sources
-        cudf.Series(indices.flatten(), name='destination'), # targets
+        cudf.Series(np.repeat(np.arange(n), k), name='source', dtype="int32"), # sources
+        cudf.Series(indices.flatten(), name='destination', dtype="int32"), # targets
     ], axis=1)
     G = cugraph.from_cudf_edgelist(edges)
     
