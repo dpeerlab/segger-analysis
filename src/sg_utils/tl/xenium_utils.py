@@ -4,6 +4,7 @@ import scanpy as sc
 import numpy as np
 import scipy as sp
 import anndata as ad
+from scipy.spatial import ConvexHull
 
 def anndata_from_transcripts(
     transcripts: pd.DataFrame,
