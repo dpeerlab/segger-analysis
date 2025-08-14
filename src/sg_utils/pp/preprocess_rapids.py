@@ -111,20 +111,24 @@ def nearest_neighbors(
 
 def preprocess_rapids(
     adata,
-    filter_min_counts: int = None,
+    filter_min_counts: int | None = None,
+    n_hvgs: int | None = None,
     pca_layer: str = 'norm',
-    pca_total_var: float = None,
+    pca_total_var: float | None = None,
     knn_neighbors: int = 15,
     umap_min_dist: float = 0.1,
     umap_n_epochs: int = 1000,
     phenograph_resolution: float = 1,
-    umap_kwargs: dict = None,
+    umap_kwargs: dict | None = None,
     random_state: int = 42,
+    show_progress: bool = True,
+    norm_target_sum: int | None = None,
 ):
-    with tqdm(total=6) as pbar:
+    with tqdm(total=6, disable=not show_progress) as pbar:
         # Filtering
         pbar.set_description("Filtering")
         adata.X = adata.raw.X.copy()
+        adata.layers['counts'] = adata.X.copy()
         if filter_min_counts is None:
             n_counts = np.sort(np.array(adata.X.sum(1)).flatten())
             idx = kneepoint(np.log10(n_counts))
@@ -135,7 +139,7 @@ def preprocess_rapids(
         # Median library-size normalization
         pbar.set_description("Normalization")
         adata.layers['norm'] = adata.X.copy()
-        sc.pp.normalize_total(adata, layer='norm')
+        sc.pp.normalize_total(adata, layer='norm', target_sum=norm_target_sum)
         
         # Log-transformation (natural log, pseudocount of 1)
         adata.layers['lognorm'] = adata.layers['norm'].copy()
@@ -146,7 +150,18 @@ def preprocess_rapids(
         
         # Run PCA using GPU
         pbar.set_description("PCA")
-        counts_sparse_gpu = cupyx.scipy.sparse.csr_matrix(adata.layers[pca_layer])
+        if n_hvgs is not None:
+            sc.pp.highly_variable_genes(
+                adata,
+                layer='counts',
+                flavor='seurat_v3',
+                n_top_genes=n_hvgs,
+            )
+            is_hvg = adata.var['highly_variable']
+            X_norm = adata[:, is_hvg].layers[pca_layer]
+        else:
+            X_norm = adata.layers[pca_layer]
+        counts_sparse_gpu = cupyx.scipy.sparse.csr_matrix(X_norm)
         model = cuml.PCA(n_components=min(adata.shape))
         X_pca = model.fit_transform(counts_sparse_gpu).get()
         cumulative_var = model.explained_variance_ratio_.get().cumsum()

@@ -37,7 +37,6 @@ def format_ax(
 
 
 def format_cbar(fig, ax):
-
     cbar = ax.get_children()[0].colorbar
     if cbar: 
         cbar.remove()
@@ -167,6 +166,8 @@ def plot_embedding(
         axes = [ax]
     for ax, feature, title in itertools.zip_longest(axes, features, titles):
         if not title: title = feature
+        if not cbar:
+            kwargs.update({'colorbar_loc': None})
         if feature:
             sc.pl.embedding(
                 adata,
@@ -176,7 +177,6 @@ def plot_embedding(
                 show=False,
                 palette=palette, cmap=cmap,
                 layer=layer,
-                colorbar_loc=None,
                 **kwargs,
             )
             if rasterized:
@@ -185,6 +185,7 @@ def plot_embedding(
                 fig, ax, style="umap",
                 title=title, dim_label=dim_label, fs=fs,
                 arrow_len=arrow_len, lw=lw, draw_arrows=draw_arrows,
+                cbar=cbar,
             )
         else:
             ax.set_visible(False)

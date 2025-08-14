@@ -43,14 +43,15 @@ def build_celltypist_model(
 
 def annotate_cell_types(
     ad: sc.AnnData,
+    raw_layer: str,
     ct_model: ct.Model,
-    cluster_col: str = 'phenograph_cluster',
+    cluster_col: str = None,
     target_sum: int = 1000,
     suffix: str = None,
 ):
     # Re-normalize consistent with CellTypist model
     t = target_sum
-    ad.layers[f'norm_{t}'] = ad.raw.X.copy()
+    ad.layers[f'norm_{t}'] = ad.layers[raw_layer].copy()
     sc.pp.normalize_total(ad, layer=f'norm_{t}', target_sum=t)
     ad.layers[f'lognorm_{t}'] = ad.layers[f'norm_{t}'].copy()
     if 'log1p' in ad.uns: del ad.uns['log1p']
@@ -60,15 +61,18 @@ def annotate_cell_types(
     with HiddenPrints():
         ad.X = ad.layers[f'lognorm_{t}']
         preds = ct.annotate(
-            ad, model=ct_model, majority_voting=True,
-            over_clustering='phenograph_cluster',
+            ad,
+            model=ct_model,
+            majority_voting=True,
+            over_clustering=cluster_col,
             min_prop=0.2,
         )
     
     # Label AnnData
     suffix = '' if suffix is None else f'_{suffix}'
     ad.obs[f'celltypist_label{suffix}'] = preds.predicted_labels['predicted_labels']
-    ad.obs[f'celltypist_label_cluster{suffix}'] = preds.predicted_labels['majority_voting']
+    if cluster_col is not None:
+        ad.obs[f'celltypist_label_cluster{suffix}'] = preds.predicted_labels['majority_voting']
     ad.obs[f'celltypist_probability{suffix}'] = preds.probability_matrix.max(1)
     for col in preds.probability_matrix.columns:
         ad.obs[f'{col}_probability'] = preds.probability_matrix[col]

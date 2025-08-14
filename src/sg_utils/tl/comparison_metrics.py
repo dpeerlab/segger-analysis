@@ -223,7 +223,8 @@ def calculate_sensitivity(
     purified_markers: Dict[str, Dict[str, List[str]]],
     max_cells_per_type: int = 1000,
     cell_type_column: str = "celltype_major",
-    random_state: int = 42
+    random_state: int = 42,
+    verbose: bool = False,
 ) -> Dict[str, List[float]]:
     """
     Calculate sensitivity of purified markers for each cell type.
@@ -260,12 +261,12 @@ def calculate_sensitivity(
 
         positive_indices = subset.var_names.get_indexer(positive_markers)
         missing_count = (positive_indices == -1).sum()
-        print(f"  {missing_count} markers not found in subset.var_names")
+        if verbose: print(f"  {missing_count} markers not found in subset.var_names")
 
         # Filter out invalid indices
         valid_indices = positive_indices[positive_indices >= 0]
         if len(valid_indices) == 0:
-            print("  No valid marker genes found in this subset. Skipping.")
+            if verbose: print("  No valid marker genes found in this subset. Skipping.")
             continue
         for i, cell_counts in enumerate(subset.X):
             total_counts = cell_counts.sum()
@@ -273,11 +274,11 @@ def calculate_sensitivity(
             try:
                 positive_counts = cell_counts[:, valid_indices].sum()
             except IndexError as e:
-                print(f"  [ERROR] IndexError at cell {i}: {e}")
+                if verbose: print(f"  [ERROR] IndexError at cell {i}: {e}")
                 continue
 
             sensitivity = positive_counts / total_counts if total_counts > 0 else 0
             sensitivity_results[cell_type].append(sensitivity)
 
-        print(f"  Finished {cell_type}. Avg sensitivity: {np.mean(sensitivity_results[cell_type]):.3f}")
+        if verbose: print(f"  Finished {cell_type}. Avg sensitivity: {np.mean(sensitivity_results[cell_type]):.3f}")
     return sensitivity_results
