@@ -18,7 +18,7 @@ dependencies = [
     "jupyter>=1.1.1",
     "matplotlib>=3.10.1",
     "numpy>=1.26.4",
-    "pandas>=2.2.3",
+    "pandas>=2.2",
     "polars>=1.20",
     "pyarrow>=17",
     "pydeseq2>=0.5.0",
@@ -29,7 +29,6 @@ dependencies = [
     "seaborn>=0.13.2",
     "shapely>=2.1.0",
     "spatialdata>=0.4.0,<0.5",
-    "spatialdata-io>=0.2.0",
     "tifffile>=2025.3.30",
     "zarr<3",
 ]

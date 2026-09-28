@@ -25,7 +25,7 @@ uv sync            # Python 3.11, versions from uv.lock
 uv run jupyter lab
 ```
 
-Running Segger itself (`RUN_SEGGER = True` in a notebook) needs a CUDA GPU and the segger package, installed as described in the [segger documentation](https://segger-segmentation.readthedocs.io/en/latest/installation.html).
+Running Segger itself (`RUN_SEGGER = True` in a notebook) needs a CUDA GPU and the `segger` command on the kernel's path, installed as described in the [segger documentation](https://segger-segmentation.readthedocs.io/en/latest/installation.html); the Atera notebook needs commit `8ee343c` of its `integration/all` branch.
 Without it, the notebooks download the segmentation used in the paper.
 
 ## Data
@@ -48,12 +48,12 @@ A few panels depend on a random draw or on results of other analyses of the pape
 
 | Flag | Notebook | Input |
 |---|---|---|
-| `PAPER_BENCHMARK` | Fig. 2, Fig. 4 | Benchmark scores of Supplementary Fig. 3.2 (`segger validate` on the benchmark runs), drawn for coverage and spurious co-expression in Fig. 2d and for spurious co-expression and PMR in Fig. 4a |
+| `PAPER_BENCHMARK` | Fig. 2, Fig. 4 | Benchmark scores of Supplementary Fig. 3.2 (`segger validate`, on the `integration/all` branch of segger, run on the benchmark segmentations), drawn for coverage and spurious co-expression in Fig. 2d and for spurious co-expression and PMR in Fig. 4a |
 | `PAPER_SAMPLE` | Fig. 4 | The 6,000 random cells per method sampled for the cell areas of Fig. 4c |
 | `PAPER_THRESHOLDS` | Atera | The per-gene similarity thresholds tabulated for Supplementary Fig. 10 |
 | `PAPER_LABELS` | Atera | The display cell types of Supplementary Fig. 10a,b |
 
-The Fig. 2, Fig. 4 and Atera notebooks end with a table of the values printed in the paper next to the values the notebook computed.
+The Fig. 2, Fig. 4 and Atera notebooks include a table of the values printed in the paper next to the values the notebook computed.
 
 ## Running a notebook non-interactively
 
