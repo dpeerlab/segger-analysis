@@ -398,6 +398,8 @@ def write_spatialdata(
     coordinates = {"x": "x", "y": "y"} | ({"z": "z"} if "z" in points.columns else {})
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message="Could not serialize pd.DataFrame.attrs")
+        # each Parquet row group starts its own index; points do not use the index order
+        warnings.filterwarnings("ignore", message="The index of the dataframe is not monotonic increasing")
         points = PointsModel.parse(dd.read_parquet(staging), coordinates=coordinates, feature_key="feature_name")
 
     shapes, annotated = {}, {}
@@ -423,6 +425,7 @@ def write_spatialdata(
     try:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message="Could not serialize pd.DataFrame.attrs")
+            warnings.filterwarnings("ignore", message="The index of the dataframe is not monotonic increasing")
             sd.SpatialData(points={"transcripts": points}, shapes=shapes, tables=annotated).write(path, overwrite=overwrite)
     finally:
         staging.unlink(missing_ok=True)
