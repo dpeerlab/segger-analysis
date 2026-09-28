@@ -56,7 +56,7 @@ def set_style(font_size: float = 6.5) -> None:
             "axes.spines.top": False,
             "axes.spines.right": False,
             "legend.frameon": False,
-            "figure.dpi": 150,
+            "figure.dpi": 300,  # sharp inline figures at journal panel sizes
             "savefig.dpi": 300,
             "savefig.bbox": "tight",
             "savefig.pad_inches": 0.02,
