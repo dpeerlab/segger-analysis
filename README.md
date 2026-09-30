@@ -4,8 +4,9 @@ This repository contains code and analyses for reproducing figures in the prepri
 
 ## Repository Structure
 
-- **`notebooks_share/`** – Jupyter notebooks for reproducing figures and performing key analyses.  
-- **`src/`** – Python modules for data preprocessing, visualization, and utility functions.  
+- **`paper/`** – Notebooks reproducing the figures of the revised manuscript, from data download to figure panels (see [`paper/README.md`](paper/README.md)).
+- **`notebooks_share/`** – Jupyter notebooks for reproducing the figures of the preprint.
+- **`src/`** – Python modules for data preprocessing, visualization, and utility functions (`sg_utils`).
 
 ## Associated Data
 
