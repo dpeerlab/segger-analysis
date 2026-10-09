@@ -99,6 +99,12 @@ DATASETS: dict[str, Dataset] = {
             "segmentations": Remote(f"{BUCKET}/paper/xenium_crc/segmentations.parquet", "segmentations.parquet"),
             "reference": Remote(f"{BUCKET}/paper/xenium_crc/human_crc_flex_reference.h5ad", "human_crc_flex_reference.h5ad"),
             "benchmark": Remote(f"{BUCKET}/paper/benchmark/benchmark_scores.tsv", "benchmark_scores.tsv"),
+            "masks": Remote(
+                url=f"{TENX}/2.0.0/Xenium_V1_Human_Colon_Cancer_P1_CRC_Add_on_FFPE/"
+                "Xenium_V1_Human_Colon_Cancer_P1_CRC_Add_on_FFPE_outs.zip",
+                target="xenium",
+                members=("cells.zarr.zip",),
+            ),
         },
     ),
     "xenium_nsclc": Dataset(
@@ -136,6 +142,29 @@ DATASETS: dict[str, Dataset] = {
             "segger": Remote(f"{BUCKET}/paper/xenium_breast/segger_segmentation.parquet", "segger/segger_segmentation.parquet"),
             "segmentations": Remote(f"{BUCKET}/paper/xenium_breast/segmentations.parquet", "segmentations.parquet"),
             "reference": Remote(f"{BUCKET}/paper/xenium_breast/census_breast_reference.h5ad", "census_breast_reference.h5ad"),
+            "masks": Remote(
+                url=f"{TENX}/3.0.0/Xenium_Prime_Breast_Cancer_FFPE/Xenium_Prime_Breast_Cancer_FFPE_outs.zip",
+                target="xenium",
+                members=("cells.zarr.zip",) + MORPHOLOGY_FOCUS,
+            ),
+        },
+    ),
+    "xenium_healthy_colon": Dataset(
+        title="Healthy human colon, Xenium with the colon panel and add-on genes",
+        source=(
+            "10x Genomics, Human Colon Preview Data (Xenium Human Colon Gene Expression Panel), "
+            "section Non-diseased, pre-designed + add-on panel"
+        ),
+        files={
+            "xenium": Remote(
+                url=f"{TENX}/1.6.0/Xenium_V1_hColon_Non_diseased_Add_on_FFPE/"
+                "Xenium_V1_hColon_Non_diseased_Add_on_FFPE_outs.zip",
+                target="xenium",
+                members=XENIUM_MEMBERS,
+            ),
+            "segger": Remote(f"{BUCKET}/paper/xenium_healthy_colon/segger_segmentation.parquet", "segger/segger_segmentation.parquet"),
+            "markers": Remote(f"{BUCKET}/paper/xenium_healthy_colon/colon_markers.csv", "colon_markers.csv"),
+            "xenium_datasets": Remote(f"{BUCKET}/paper/xenium_healthy_colon/xenium_public_datasets.csv", "xenium_public_datasets.csv"),
         },
     ),
     "atera_cervical": Dataset(
@@ -175,6 +204,7 @@ MD5 = {
     "xenium_crc/segmentations.parquet": "b496d9ad3d7d991fe0ea40a954b3680d",
     "xenium_crc/human_crc_flex_reference.h5ad": "36059e31f025e52ab0beab96664ce7e5",
     "xenium_crc/benchmark_scores.tsv": "8938a747f88821cd628f929928ac969e",
+    "xenium_crc/xenium/cells.zarr.zip": "86ac2be8a13509c2fe1492f9b63c8a93",
     "xenium_nsclc/xenium/experiment.xenium": "2cc4e33161d4a900fbc274d6c8b7081d",
     "xenium_nsclc/xenium/gene_panel.json": "b4a8ab5086a395079ab93981da1591f5",
     "xenium_nsclc/xenium/metrics_summary.csv": "60d9a6e457e05d182b59b99601aec5a9",
@@ -204,6 +234,22 @@ MD5 = {
     "xenium_breast/segger/segger_segmentation.parquet": "8127e7026025c044a706d8a933cbf714",
     "xenium_breast/segmentations.parquet": "e159fb3b7a3f4ac84cedbb533b29125a",
     "xenium_breast/census_breast_reference.h5ad": "1c059746963fb5baf0fd679e699c330b",
+    "xenium_breast/xenium/cells.zarr.zip": "aab8472f3e666ad5ee82c59f79e8bf5a",
+    "xenium_breast/xenium/morphology_focus/morphology_focus_0000.ome.tif": "6044bf1259acb62b81056d9f826c2771",
+    "xenium_breast/xenium/morphology_focus/morphology_focus_0001.ome.tif": "b770d91a4ebe01da01eaaba0a2d2018f",
+    "xenium_breast/xenium/morphology_focus/morphology_focus_0002.ome.tif": "25d8d82eddb77d7a1e88b3b4016b1158",
+    "xenium_breast/xenium/morphology_focus/morphology_focus_0003.ome.tif": "1c0430800597706eb5b42e3fb7926790",
+    "xenium_healthy_colon/xenium/experiment.xenium": "ff1140b14441c29180cc38d2d19b46b5",
+    "xenium_healthy_colon/xenium/gene_panel.json": "e0a9199398ebaacf47328c7bedf216e1",
+    "xenium_healthy_colon/xenium/metrics_summary.csv": "ccb91c9032ffce6c4b7191c7ff524c97",
+    "xenium_healthy_colon/xenium/transcripts.parquet": "13d7a4387e9f44d2d3270920aa4809e3",
+    "xenium_healthy_colon/xenium/cells.parquet": "ab6cbca2643e0461151d8b1e08345f4f",
+    "xenium_healthy_colon/xenium/cell_boundaries.parquet": "b07c69eb5d41c46721a8bfafd61d2e4a",
+    "xenium_healthy_colon/xenium/nucleus_boundaries.parquet": "f385ad0282e556a19af806fc248801f8",
+    "xenium_healthy_colon/xenium/cell_feature_matrix.h5": "13d4d625237c75609bda53afa8b00a34",
+    "xenium_healthy_colon/segger/segger_segmentation.parquet": "ae17fc301d2dfb4df973c80b99bb86d6",
+    "xenium_healthy_colon/colon_markers.csv": "147c29844dcb6c62d407c5748b7e9160",
+    "xenium_healthy_colon/xenium_public_datasets.csv": "7d33b96fade80f8d826a81802e7ee975",
     "atera_cervical/xenium/experiment.xenium": "40db0ab68d65b2085d8b49daa5d7f9d9",
     "atera_cervical/xenium/metrics_summary.csv": "7a06c61c9b12f585d61f2d678f7bfe5e",
     "atera_cervical/xenium/transcripts.parquet": "b9fa553763b08bb37c3c72e93a1a3b7b",

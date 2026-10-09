@@ -48,6 +48,8 @@ def annotate_cell_types(
     cluster_col: str = None,
     target_sum: int = 1000,
     suffix: str = None,
+    majority_voting: bool = True,
+    cell_type_only: bool = False,
 ):
     # Re-normalize consistent with CellTypist model
     t = target_sum
@@ -63,7 +65,7 @@ def annotate_cell_types(
         preds = ct.annotate(
             ad,
             model=ct_model,
-            majority_voting=True,
+            majority_voting=majority_voting,
             over_clustering=cluster_col,
             min_prop=0.2,
         )
@@ -71,13 +73,14 @@ def annotate_cell_types(
     # Label AnnData
     suffix = '' if suffix is None else f'_{suffix}'
     ad.obs[f'celltypist_label{suffix}'] = preds.predicted_labels['predicted_labels']
-    if cluster_col is not None:
-        ad.obs[f'celltypist_label_cluster{suffix}'] = preds.predicted_labels['majority_voting']
-    ad.obs[f'celltypist_probability{suffix}'] = preds.probability_matrix.max(1)
-    for col in preds.probability_matrix.columns:
-        ad.obs[f'{col}_probability'] = preds.probability_matrix[col]
-    entropy = sp.stats.entropy(preds.probability_matrix, axis=1)
-    ad.obs[f'celltypist_entropy{suffix}'] = entropy
+    if not cell_type_only:
+        if cluster_col is not None:
+            ad.obs[f'celltypist_label_cluster{suffix}'] = preds.predicted_labels['majority_voting']
+        ad.obs[f'celltypist_probability{suffix}'] = preds.probability_matrix.max(1)
+        for col in preds.probability_matrix.columns:
+            ad.obs[f'{col}_probability'] = preds.probability_matrix[col]
+        entropy = sp.stats.entropy(preds.probability_matrix, axis=1)
+        ad.obs[f'celltypist_entropy{suffix}'] = entropy
     
     # Cleanup
     del ad.layers[f'lognorm_{t}'], ad.layers[f'norm_{t}']

@@ -33,6 +33,39 @@ dependencies = [
     "zarr<3",
 ]
 
+[project.optional-dependencies]
+# CUDA 12 stack of the Fig. 5, Extended Data Fig. 1, 2, 6 and Supplementary Fig. 1, 2, 11 notebooks
+gpu = [
+    "cellpose>=4",
+    "cudf-cu12==24.10.*; sys_platform == 'linux'",
+    "cugraph-cu12==24.10.*; sys_platform == 'linux'",
+    "cuml-cu12==24.10.*; sys_platform == 'linux'",
+    "cupy-cuda12x>=12.2,<13; sys_platform == 'linux'",
+    "lightning>=2.4",
+    "segger @ git+https://github.com/dpeerlab/segger@98765aaacc3e62eba8a3a9f80fc35222d1a831ba",
+    "torch==2.5.*",
+    "torch-geometric>=2.6",
+    "umap-learn>=0.5.7",
+]
+# Resolved separately from `gpu`, so the CPU environment keeps its own versions
+cpu = []
+
+[tool.uv]
+index-strategy = "unsafe-best-match"
+conflicts = [[{ extra = "cpu" }, { extra = "gpu" }]]
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
