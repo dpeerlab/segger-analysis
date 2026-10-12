@@ -7,6 +7,7 @@ edges cut by tile boundaries truncate the receptive field of nearby nodes.
 Requires torch, torch_geometric and segger.
 """
 
+import gc
 from pathlib import Path
 from timeit import default_timer
 from typing import Sequence
@@ -497,40 +498,36 @@ def benchmark_loader(
     mode: str = 'partition',
     n_warmup: int = 1,
 ) -> dict:
-    """Time one pass over a dataset's tiles and record peak GPU memory.
+    """Time one pass over a dataset's tiles and record its peak GPU memory.
+
+    Setup (sorting the graph by tile, or moving it to the GPU) and warm-up
+    passes are excluded; memory is the GPU memory in use at the start of the
+    timed pass plus the peak allocated during it.
 
     Args:
         data_module: A configured segger ``ISTDataModule``.
         mode: ``partition`` times segger's index-slicing training loader;
             ``subgraph`` times per-tile extraction with the PyTorch Geometric
             ``subgraph`` method over the same tiles.
-        n_warmup: Untimed passes run before the timed one.
+        n_warmup: Untimed passes run before the timed one (``partition``).
 
     Returns:
-        A dict with ``time`` (seconds) and ``memory`` (peak bytes
-        allocated).
+        A dict with ``time`` (seconds) and ``memory`` (peak bytes in use).
     """
+    if hasattr(data_module, 'fit_dataset'):
+        data_module.teardown('fit')
+    if hasattr(data_module, 'predict_dataset'):
+        data_module.teardown('predict')
+    gc.collect()
     torch.cuda.empty_cache()
-    try:
-        torch.cuda.reset_peak_memory_stats()
-        rmm_statistics = None
-    except RuntimeError:
-        # `import segger` routes torch through an RMM pool, whose statistics
-        # replace torch's peak counters.
-        from rmm import statistics as rmm_statistics
-
-        baseline = rmm_statistics.get_statistics().current_bytes
-        rmm_statistics.push_statistics()
-    torch.cuda.synchronize()
 
     if mode == 'partition':
-        # As after segger's predict teardown: loader workers need CPU tensors
-        data_module.data = data_module.data.cpu()
         data_module.setup('fit')
         loader = data_module.train_dataloader()
         for _ in range(n_warmup):
             for _ in loader:
                 pass
+        memory = _PeakMemory()
         start = default_timer()
         for _ in loader:
             pass
@@ -538,9 +535,9 @@ def benchmark_loader(
 
     elif mode == 'subgraph':
         data_module.setup('predict')
-        data_module.data = data_module.data.cuda()
         data = data_module.data
         tiles = data_module.predict_dataset.tiling.tiles
+        memory = _PeakMemory()
         start = default_timer()
         for tile in tiles:
             xmin, ymin, xmax, ymax = tile.bounds
@@ -559,9 +556,30 @@ def benchmark_loader(
             f"Unknown mode: '{mode}'. Use 'partition' or 'subgraph'."
         )
 
-    torch.cuda.synchronize()
-    if rmm_statistics is None:
-        memory = torch.cuda.max_memory_allocated()
-    else:
-        memory = baseline + rmm_statistics.pop_statistics().peak_bytes
-    return {'time': elapsed, 'memory': memory}
+    return {'time': elapsed, 'memory': memory.stop()}
+
+
+class _PeakMemory:
+    """Peak GPU memory in use from construction to :meth:`stop`.
+
+    ``import segger`` routes torch, CuPy and cuDF through one RMM pool, whose
+    statistics replace torch's peak counters (unsupported by RMM).
+    """
+
+    def __init__(self):
+        torch.cuda.synchronize()
+        try:
+            torch.cuda.reset_peak_memory_stats()
+            self.rmm = None
+        except RuntimeError:
+            from rmm import statistics
+
+            self.rmm = statistics
+            self.baseline = statistics.get_statistics().current_bytes
+            statistics.push_statistics()
+
+    def stop(self) -> int:
+        torch.cuda.synchronize()
+        if self.rmm is None:
+            return torch.cuda.max_memory_allocated()
+        return self.baseline + self.rmm.pop_statistics().peak_bytes
