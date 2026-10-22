@@ -506,8 +506,8 @@ def benchmark_loader(
 
     Args:
         data_module: A configured segger ``ISTDataModule``.
-        mode: ``partition`` times segger's index-slicing training loader;
-            ``subgraph`` times per-tile extraction with the PyTorch Geometric
+        mode: ``partition`` times segger's index-slicing training loader,
+            moving each batch to the GPU as in training; ``subgraph`` times per-tile extraction with the PyTorch Geometric
             ``subgraph`` method over the same tiles.
         n_warmup: Untimed passes run before the timed one (``partition``).
 
@@ -524,14 +524,18 @@ def benchmark_loader(
     if mode == 'partition':
         data_module.setup('fit')
         loader = data_module.train_dataloader()
+        # Each batch is moved to the GPU, as Lightning does during training
         for _ in range(n_warmup):
-            for _ in loader:
-                pass
+            for batch in loader:
+                batch = batch.to('cuda')
+        del batch
         memory = _PeakMemory()
         start = default_timer()
-        for _ in loader:
-            pass
+        for batch in loader:
+            batch = batch.to('cuda')
+        torch.cuda.synchronize()
         elapsed = default_timer() - start
+        del batch
 
     elif mode == 'subgraph':
         data_module.setup('predict')
